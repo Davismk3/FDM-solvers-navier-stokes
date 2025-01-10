@@ -1,3 +1,12 @@
+NOTE: 
+While this repository contains original work, I have Prof. Tony Saad from YouTube to thank for teaching me the general algorithms, 
+of which I rewrote with numpy and my own comments. I also coupled a heat equation to the final model. 
+
+Math.pdf:
+This file serves to document my organized mathematical work for solving the terms found in the Navier-Stokes equations using the
+finite volume method. My work for the transient, diffusion, advection/convection, and body force terms was done indepentently, 
+whereas the work for pressure was reverse-engineered from Prof. Tony Saad's algorithm.
+
 Module_1.py:
 Within Module_1.py is a simple 1D Cartesian advection/convection and diffusion model. The purpose of Module_1.py was to rigorously teach 
 myself the foundations of numerically solving and computationally modeling the advection/convection and diffusion terms found in the 
