@@ -4,7 +4,7 @@ myself the foundations of numerically solving and computationally modeling the a
 momentum Navier-Stokes equation.
 
 Module_2.py:
-Within Module_2.py is a complete and validated 2D Cartesian fluid/thermo-dynamics model using the Navier-Stokes equation and a heat equation 
+Within Module_2.py is a complete and validated 2D Cartesian fluid/thermo-dynamics model using the Navier-Stokes equations and a heat equation 
 for convection/advection and diffusion. 
 
 Module_2_Couette_Validation.py:
