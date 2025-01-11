@@ -2,13 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+# Advection/Convection & Diffusion Models | Finite difference Method | Upwind Schemes
+
+# These models serve to provide insight into numerically solving the individual terms
+# in the Navier-Stokes equations, not including the pressure gradient term
+
 # -----------------------------------------
 # Simulation Parameters
 # -----------------------------------------
 
 # Mesh
 Lx = 1.0
-Nx = 70
+Nx = 50
 dx = Lx / Nx
 x = np.linspace(0, Lx, Nx)  # from 0 to Lx, with Nx points
 
@@ -17,7 +22,7 @@ alpha = 1.0
 beta = 0.1
 
 # Time Step CFL Condition
-buffer = 0.9  # for CFL condition to further stability
+buffer = 0.9  # for CFL condition to ensure stability
 
 dt_advection = dx / alpha * buffer
 print(f"Advection Time Step: {dt_advection}")
@@ -45,10 +50,12 @@ theta[int(0.25 * Nx): int(0.75 * Nx)] = 5.0  # initial pulse
 
 
 def advection():
-    # It is interesting to note that this advection equation is the 1D equivalent of the material derivative if set to
-    # equal zero. So it is a convection equation for phi, except rather than the velocity "u", there is the constant
-    # "a", so the speed of the advection equation is generally constant, whereas it usually varies and is in more than
-    # one dimension for convection, such as in the Navier-Stokes equations.
+    """
+    It is interesting to note that this advection equation is the 1D equivalent of the material derivative if set to
+    equal zero. So it is a convection equation for phi, except rather than the velocity "u", there is the constant
+    "a", so the speed of the advection equation is generally constant, whereas it usually varies and is in more than
+    one dimension for convection, such as in the Navier-Stokes equations.
+    """
 
     global phi
 
@@ -87,8 +94,9 @@ def diffusion():
     theta_new[1:-1] = theta[1:-1] + dt_diffusion * beta * (theta[2:] + theta[:-2] - 2 * theta[1:-1]) / (dx ** 2)
 
     # BCs
-    theta[0] = theta[1]  # Neumann, no flux
+    theta_new[0] = theta[1]  # Neumann, no flux
     theta[-1] = 1.0  # Dirichlet
+    theta_new[-1] = theta[-2]
 
     theta = theta_new.copy()
 
