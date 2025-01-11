@@ -285,8 +285,8 @@ def animate(frame):
     )
 
     # Heat Source
-    heat_source = X[1:-1, 1:-1] * 0.1
-    # heat_source = 0
+    # heat_source = X[1:-1, 1:-1] * 0.1
+    heat_source = 0
 
     # Update temperature
     T_new[1:-1, 1:-1] = T[1:-1, 1:-1] + dt * (T_conv + T_diff + heat_source)
