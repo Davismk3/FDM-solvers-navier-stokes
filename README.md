@@ -61,7 +61,6 @@ A 2D model similar to **Module_2.py**, but with two separate meshes sharing a bo
 ## Acknowledgments
 
 - **Prof. Tony Saad (YouTube)**: Provided the general algorithmic framework for handling the pressure terms and other concepts in finite volume formulations.  
-- All other contributors and open-source communities that have shared insights and computational examples.
 
 ---
 
