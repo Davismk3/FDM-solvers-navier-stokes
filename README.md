@@ -1,6 +1,6 @@
 # Navier-Stokes and Heat Equation Finite Volume Solver
 
-This repository contains a series of Python modules implementing the finite volume method for solving the Navier-Stokes equations (including advection/convection, diffusion, and pressure terms) and a coupled heat equation. While the work here is original, much of the underlying algorithmic inspiration is derived from **Prof. Tony Saad’s** YouTube lectures, for which I am deeply grateful.
+This repository contains a series of Python modules implementing the finite volume method for solving the Navier-Stokes equations (including advection/convection, diffusion, and pressure terms) and a coupled heat equation. While the code and math work here is original, the algorithms were taken from **Prof. Tony Saad’s** YouTube lectures: https://www.youtube.com/@ProfessorSaadExplains
 
 ---
 
