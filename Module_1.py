@@ -52,9 +52,7 @@ theta[int(0.25 * Nx): int(0.75 * Nx)] = 5.0  # initial pulse
 def advection():
     """
     It is interesting to note that this advection equation is the 1D equivalent of the material derivative if set to
-    equal zero. So it is a convection equation for phi, except rather than the velocity "u", there is the constant
-    "a", so the speed of the advection equation is generally constant, whereas it usually varies and is in more than
-    one dimension for convection, such as in the Navier-Stokes equations.
+    equal zero.
     """
 
     global phi
