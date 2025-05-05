@@ -2,6 +2,10 @@
 
 The following repository contains scripts for solving and validating the incompressible Navier-Stokes equations using the finite difference / finite volume method. The intermediate velocities are solved for, then corrected later after solving for the pressure gradient. 
 
+## Results
+
+![Heat Transfer](assets/heat_transfer.png)
+
 ## Contents
 
 [1d_advection_diffusion.py](#1d_advection_diffusionpy)  
