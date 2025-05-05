@@ -1,6 +1,6 @@
 # Navier-Stokes and Heat Equation Finite Volume Solver
 
-The following repository contains scripts for solving and validating the incompressible Navier-Stokes equations using using the finite difference / finite volume method. The intermediate velocities are solved for, then corrected later after solving for the pressure gradient. 
+The following repository contains scripts for solving and validating the incompressible Navier-Stokes equations using the finite difference / finite volume method. The intermediate velocities are solved for, then corrected later after solving for the pressure gradient. 
 
 ## Contents
 
