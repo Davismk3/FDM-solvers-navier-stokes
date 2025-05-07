@@ -2,147 +2,109 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-# Advection/Convection & Diffusion Models | Finite difference Method | Upwind Schemes
+"""
+Finite Difference Simulation of 1D Advection and Diffusion:
 
-# These models serve to provide insight into numerically solving the individual terms
-# in the Navier-Stokes equations, not including the pressure gradient term
+∂φ/∂t + α⋅∂φ/∂x = 0
 
-# -----------------------------------------
-# Simulation Parameters
-# -----------------------------------------
+∂θ/∂t = β⋅∂²θ/∂x²
 
-# Mesh
+This script provided me insight into numerically solving the transport and diffusion 
+terms of the Navier-Stokes equations (excluding pressure). Upwind and central difference 
+schemes are used for spatial derivatives, and forward Euler for time integration.
+"""
+
+# Parameters & Grid Setup -----------------------------------------------------
 Lx = 1.0
 Nx = 50
 dx = Lx / Nx
-x = np.linspace(0, Lx, Nx)  # from 0 to Lx, with Nx points
+x = np.linspace(0, Lx, Nx)
 
-# Constants
-alpha = 1.0
-beta = 0.1
-
-# Time Step CFL Condition
-buffer = 0.9  # for CFL condition to ensure stability
+alpha = 1.0  # advection speed
+beta = 0.1  # diffusion coefficient
+buffer = 0.9  # CFL stability buffer
 
 dt_advection = dx / alpha * buffer
-print(f"Advection Time Step: {dt_advection}")
+dt_diffusion = dx**2 / (2 * beta) * buffer
+Nt = 100 
 
-dt_diffusion = (dx ** 2) / (beta * 2) * buffer
+print(f"Advection Time Step: {dt_advection}")
 print(f"Diffusion Time Step: {dt_diffusion}")
 
-Nt = 100
+# Initial Conditions ----------------------------------------------------------
+phi = np.ones_like(x)
+phi[int(0.25 * Nx): int(0.75 * Nx)] = 5.0  # rectangular pulse for advection
 
-# -----------------------------------------
-# Initialize Scalar Fields
-# -----------------------------------------
-
-# IC for advection
-phi = np.ones_like(x)  # phi field matches the x mesh with phi = 1 at each point
-phi[int(0.25 * Nx): int(0.75 * Nx)] = 5.0  # initial pulse
-
-# IC for diffusion
 theta = np.ones_like(x)
-theta[int(0.25 * Nx): int(0.75 * Nx)] = 5.0  # initial pulse
+theta[int(0.25 * Nx): int(0.75 * Nx)] = 5.0  # same for diffusion
 
-# -----------------------------------------
-# Advection & Diffusion Algorithms
-# -----------------------------------------
-
-
+# Advection & Diffusion Solvers -----------------------------------------------
 def advection():
     """
-    It is interesting to note that this advection equation is the 1D equivalent of the material derivative if set to
-    equal zero.
+    Solves the 1D linear advection equation using an upwind scheme.
     """
 
     global phi
-
     phi_new = phi.copy()
 
-    # Solving for phi_new with forward difference for time (arrays are same size despite shifts)
-
-    # If advection is to the left, forward difference for space is used
+    # Forward differencing in space (flows to left)
     phi_new[1:-1] = phi[1:-1] + dt_advection * alpha * (phi[2:] - phi[1:-1]) / (2 * dx)
 
-    # If advection is to the right, backward difference for space is used
-    # phi_new[1:-1] = phi[1:-1] - dt_advection * alpha * (phi[1:-1] - phi[:-2]) / (2 * dx)
-
-    # This is called the 'Upwind Scheme', and is a fundamental aspect of solving advection/convection numerically
-
-    # BCs
-    phi_new[0] = phi[1]  # Neumann, no flux
-    phi_new[-1] = 1.0  # Dirichlet
-
-    # Cyclic BCs
-    # phi_new[0] = phi[1]
-    # phi_new[-1] = phi_new[0]
+    # Boundary Conditions (these are not required for the transport equation)
+    phi_new[0] = phi[1]  # Neumann
+    phi_new[-1] = 1.0  # Dirichlet        
 
     phi = phi_new.copy()
-
     return phi
 
-
 def diffusion():
+    """
+    Solves the 1D linear diffusion equation using a central difference scheme.
+    """
 
     global theta
-
     theta_new = theta.copy()
 
-    # Diffusion
-    theta_new[1:-1] = theta[1:-1] + dt_diffusion * beta * (theta[2:] + theta[:-2] - 2 * theta[1:-1]) / (dx ** 2)
+    # Central difference for diffusion
+    theta_new[1:-1] = theta[1:-1] + dt_diffusion * beta * (
+        theta[2:] - 2 * theta[1:-1] + theta[:-2]) / dx**2
 
-    # BCs
-    theta_new[0] = theta[1]  # Neumann, no flux
-    theta[-1] = 1.0  # Dirichlet
-    theta_new[-1] = theta[-2]
+    # Boundary Conditions
+    theta_new[0] = theta[1]  # Neumann
+    theta_new[-1] = theta[-2]  # Neumann 
 
     theta = theta_new.copy()
-
     return theta
 
-
-# -----------------------------------------
-# Visuals
-# -----------------------------------------
-
+# Visualization ---------------------------------------------------------------
 fig, axes = plt.subplots(1, 2, figsize=(12, 8), constrained_layout=True)
-ax1, ax2 = axes.flatten()
+ax1, ax2 = axes
 
-font_size = 10
-
-# Advection
+# Advection Plot Setup
 phi_line, = ax1.plot(x, phi)
 ax1.set_xlim(0, Lx)
 ax1.set_ylim(0, 6)
-ax1.set_xlabel('Position (m)', fontsize=14)
-ax1.set_ylabel('Phi', fontsize=14)
-ax1.set_title('1D Advection Simulation', fontsize=16)
+ax1.set_xlabel('x')
+ax1.set_ylabel(r'$\phi$')
+ax1.set_title('1D Advection')
 
-# Diffusion
+# Diffusion Plot Setup
 theta_line, = ax2.plot(x, theta)
 ax2.set_xlim(0, Lx)
 ax2.set_ylim(0, 6)
-ax2.set_xlabel('Position (m)', fontsize=14)
-ax2.set_ylabel('Phi', fontsize=14)
-ax2.set_title('1D Diffusion Simulation', fontsize=16)
-
+ax2.set_xlabel('x')
+ax2.set_ylabel(r'$\theta$')
+ax2.set_title('1D Diffusion')
 
 def animate(frame):
     global phi, theta
-
     phi = advection()
-    phi_line.set_ydata(phi)
-    ax1.set_title(f'1D Advection Simulation', fontsize=16)
-
     theta = diffusion()
+
+    phi_line.set_ydata(phi)
     theta_line.set_ydata(theta)
-    ax2.set_title(f'1D Diffusion Simulation', fontsize=16)
 
     return phi_line, theta_line
 
-
-# Create the animation object
 anim = FuncAnimation(fig, animate, frames=Nt, interval=50, blit=False)
-
-# Display the animation
 plt.show()

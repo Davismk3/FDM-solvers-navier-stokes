@@ -1,22 +1,60 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import cm
 from matplotlib.animation import FuncAnimation
 
-# Navier-Stokes Fluid Model | Finite Volume Method | Staggered Grid | Origin Upper Left Corner
+"""
+We will be solving the 2D incompressible Navier–Stokes equations with buoyancy-driven convection using the finite volume method (FVM) 
+on a staggered grid. The algorithm was taken and improved (using numpy) from Professor Saad's YouTube channel. The governing equations 
+under the Boussinesq approximation are:
 
-# Array Notation:
-# array[0] - first item
-# array[-1] - last item
-# array[1] - second item
-# array[-2] - second-to-last item
-# array[1: -1] - second item to second-to-last item (does not include -1)
+Ω = x ∈ [0, Lx] ∪ y ∈ [0, Ly]                               (2D spatial domain)
+∇⋅ū = 0,                           x̄ ∈ Ω, t ∈ [0, T]        (incompressibility)
+∂ū/∂t + (ū⋅∇)ū = ν∇²ū - ∇p + f_b,  x̄ ∈ Ω, t ∈ [0, T]        (momentum conservation with buoyancy)
+∂T/∂t + (ū⋅∇)T = κ∇²T,             x̄ ∈ Ω, t ∈ [0, T]        (temperature transport)
 
-# -----------------------------------------
-# Simulation Parameters
-# -----------------------------------------
+The buoyancy force f_b is modeled as:
+f_b = (0, g⋅κ⋅(T - T₀)), with T₀ = 0                        (Boussinesq body force)
 
-# Mesh
+We solve for the x-velocity u(x, y, t), the y-velocity v(x, y, t), the pressure p(x, y, t), and the temperature T(x, y, t).
+
+Boundary conditions:
+u = 0, v = 0                           on all walls (no-slip or symmetry)
+∂T/∂n = 0                              on all walls (no heat flux)
+
+Initial conditions:
+u(x, y, 0) = v(x, y, 0) = 0, 
+T(x, y, 0) = localized hotspot near center
+
+We discretize the equations using the finite volume method on a staggered grid. A projection method is used:
+- Intermediate velocities (u*, v*) are computed from advection, diffusion, and buoyancy
+- Pressure is computed from a Poisson equation to enforce ∇⋅ū = 0
+- Velocities are corrected to be divergence-free
+- Temperature is evolved using an upwind scheme for advection and central differences for diffusion
+
+The solution is visualized in real time using Matplotlib animation, displaying both the temperature field and the velocity vectors.
+
+Array Notation:
+array[0] - first item
+array[-1] - last item
+array[1] - second item
+array[-2] - second-to-last item
+array[1: -1] - second item to second-to-last item (does not include -1)
+
+Staggered Grid:
+
+        |       |
+      --+---v₀--+---> x
+        |       |
+        u₀  P₀  u 
+        |       |
+      --+---v---+
+        ↓
+        y
+
+The origin is in the upper left corner.
+"""
+
+# Parameters & Grid Setup -----------------------------------------------------
 Nx = 100
 Ny = 100
 Lx = 30.0
@@ -28,28 +66,21 @@ y = np.linspace(0, Ly, Ny + 2)
 cell_area = dx * dy
 X, Y = np.meshgrid(x, y)
 
-# print(dx, dy)
-
-# Constants
 alpha = 0.1  # velocity diffusion speed (viscosity)
 beta = 0.001  # temperature diffusion speed
 kappa = 0.00001  # temperature buoyancy constant
 g = - 10.0
 rho = 1.0  # fluid density
 
-# Pressure
+# For pressure
 tolerance = 0.00001
 max_iteration = 100
 mu = 0.1
 
-# Time Step Control
+# Time step buffer for a quick stability fix while troubleshooting 
 buffer = 0.25
 
-# -----------------------------------------
-# ICs
-# -----------------------------------------
-
-# Scalars
+# Initial Conditions ----------------------------------------------------------
 P = np.ones([Ny + 2, Nx + 2]) * 0.0  # numpy is row-based, so Ny before Nx
 u = np.zeros([Ny + 2, Nx + 2])
 v = np.zeros([Ny + 2, Nx + 2])
@@ -73,18 +104,14 @@ for i in range(1, Nx + 1):
         if distance_squared <= radius ** 2:
             T[j, i] = 100.0  # Initial hot temperature
 
-T[95:, :] = 100.0
-# T[27:50, 10:12] = 0.0
+T[95:, :] = 100.0  # the bottom rows are all hot
 
-# -----------------------------------------
-# The Algorithm
-# -----------------------------------------
-
+# The Algorithm ===============================================================
 
 def animate(frame):
     global u, v, P, T, t
 
-    # Step 0: Time Step # -----------------------------------------
+    # Step 0: Time Step # -----------------------------------------------------
 
     # Compute maximum velocities for CFL condition
     u_max = np.max(np.abs(u)) + 1e-5
@@ -99,7 +126,7 @@ def animate(frame):
     dt = min(dt_advection, dt_diffusion, dt_velocity)
     print(f"Dynamic Time Step: {dt}")
 
-    # Step 1: BCs # -----------------------------------------
+    # Step 1: BCs # -----------------------------------------------------------
 
     # BC Types:
     # U or V = #.# if BC is #.#
@@ -136,7 +163,7 @@ def animate(frame):
     T[:, 0] = T[:, 1]  # Left: No Flux
     T[:, -1] = T[:, -2]  # Right: No Flux
 
-    # Step 2.1: Intermediate X-Velocities # -----------------------------------------
+    # Step 2.1: Intermediate X-Velocities # -----------------------------------
 
     # Pre-computations
     u_l = 0.5 * (u[1:-1, 1:-1] + u[1:-1, :-2])  # self + left average
@@ -160,7 +187,7 @@ def animate(frame):
     # Update intermediate u_star
     u_star[1:-1, 1:-1] = u[1:-1, 1:-1] + (dt / cell_area) * (u_conv + u_diff)
 
-    # Step 2.2: Intermediate Y-Velocities # -----------------------------------------
+    # Step 2.2: Intermediate Y-Velocities # -----------------------------------
 
     # Pre-computations
     v_l = 0.5 * (v[1:-1, 1:-1] + v[1:-1, :-2])  # self + left average
@@ -187,7 +214,7 @@ def animate(frame):
     # Update intermediate v_star
     v_star[1:-1, 1:-1] = v[1:-1, 1:-1] + (dt / cell_area) * (v_conv + v_diff + buoyancy)
 
-    # Step 3: Pressure Correction # -----------------------------------------
+    # Step 3: Pressure Correction # -------------------------------------------
 
     # We want to solve for P, so that we can then use it for calculating its gradient
 
@@ -255,7 +282,7 @@ def animate(frame):
     # cell area (the integration over cell volume) cancels out for both transient and pressure gradient terms, so a
     # standard FDM is appropriate here due to the structured nature of the grid
 
-    # Step 4: Temperature # -----------------------------------------
+    # Step 4: Temperature # ---------------------------------------------------
 
     # bring velocities at faces to the cell centers for calculations
     u_c = 0.5 * (u[1:-1, 1:-1] + u[1:-1, 2:])  # self + left average
@@ -293,7 +320,7 @@ def animate(frame):
 
     T[1:-1, 1:-1] = T_new[1:-1, 1:-1]
 
-    # Visuals # -----------------------------------------
+    # Visuals # ---------------------------------------------------------------
 
     t += dt
 
@@ -313,33 +340,22 @@ def animate(frame):
 
     return [im, quiver]
 
-
-# -----------------------------------------
-# Visuals
-# -----------------------------------------
-
-# time set-up
+# Visualization ---------------------------------------------------------------
 t = 0
 n_steps = 500
 
-# Set up the plot
 fig, ax = plt.subplots(figsize=(8, 6))
-im = ax.imshow(T[1:-1, 1:-1], extent=[0, Lx, 0, Ly], origin='upper', cmap=cm.jet, vmin=0, vmax=100)
+im = ax.imshow(T[1:-1, 1:-1], extent=[0, Lx, 0, Ly], origin='upper', cmap="coolwarm", vmin=0, vmax=100)
 fig.colorbar(im, ax=ax)
 ax.set_title('Temperature Field')
 ax.set_xlabel('X (m)')
 ax.set_ylabel('Y (m)')
 
-# Create a coarser grid for quiver plot to avoid clutter
-skip = 2  # Skip every 4 data points
+skip = 2  # Skip every 4 data points for quiver arrows
 Xq = X[1:-1, 1:-1][::skip, ::skip]
 Yq = Y[1:-1, 1:-1][::skip, ::skip]
 
-# Initialize quiver plot
 quiver = ax.quiver(Xq, Ly - Yq, np.zeros_like(Xq), np.zeros_like(Yq), color='white', scale=50)
 
-# Create the animation
 anim = FuncAnimation(fig, animate, frames=n_steps, interval=2, blit=True)
-
-# Show the animation
 plt.show()

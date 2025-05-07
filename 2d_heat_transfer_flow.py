@@ -3,21 +3,44 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.animation import FuncAnimation
 
-# Navier-Stokes Fluid Model | Finite Volume Method | Staggered Grid | Origin Upper Left Corner
+"""
+We will be solving the 2D incompressible Navier–Stokes equations with buoyancy-driven convection using the finite volume method (FVM) 
+on a staggered grid. This model represents a two-layer system: an upper mantle and a lower core, both governed by the same form of 
+Navier–Stokes equations but with different thermal and diffusive properties.
 
-# Two meshes, where heat can diffuse across their shared boundary, but fluid can't flow across it
+Ω_m = x ∈ [0, Lx] ∪ y ∈ [Ly/2, Ly]       (mantle domain)
+Ω_c = x ∈ [0, Lx] ∪ y ∈ [0, Ly/2]        (core domain)
 
-# Array Notation:
-# array[0] - first item
-# array[-1] - last item
-# array[1] - second item
-# array[-2] - second-to-last item
-# array[1: -1] - second item to second-to-last item (does not include -1)
+Each layer obeys:
+∇⋅ū = 0                                 (incompressibility)
+∂ū/∂t + (ū⋅∇)ū = ν∇²ū - ∇p + f_b        (momentum conservation)
+∂T/∂t + (ū⋅∇)T = κ∇²T                   (temperature transport)
 
-# -----------------------------------------
-# Simulation Parameters
-# -----------------------------------------
+At the interface (y = Ly/2), temperature can diffuse but velocity cannot (no flow across layers).
 
+Boundary conditions:
+u = 0, v = 0                            on all walls (no-slip)
+∂T/∂n = 0                               on external boundaries
+T_m[-1, :] = T_c[1, :]                  (inter-layer heat coupling)
+
+The simulation is visualized using Matplotlib, showing both temperature fields and overlaid velocity vectors
+for mantle and core regions. A projection method is used for pressure correction.
+
+Staggered Grid:
+
+        |       |
+      --+---v₀--+--> x
+        |       |
+        u₀  P₀  u
+        |       |
+      --+---v---+
+        ↓
+        y
+
+The origin is in the upper left corner.
+"""
+
+# Parameters & Grid Setup -----------------------------------------------------
 # Global 'Mesh'
 Nx = 100
 Ny = 100
@@ -29,7 +52,7 @@ cell_area = dx * dy
 
 # Mantle Mesh
 Nx_m = Nx
-Ny_m = Ny // 2  # be sure this is an integer
+Ny_m = int(Ny // 2)  # be sure this is an integer
 Lx_m = Lx
 Ly_m = Ly // 2  # be sure this is the same denominator as for Ny_m
 x_m = np.linspace(0, Lx_m, Nx_m + 2)
@@ -67,13 +90,7 @@ mu = 0.1
 # Time Step Control
 buffer = 0.9
 
-# -----------------------------------------
-# ICs
-# -----------------------------------------
-
-# Mantle # -----------------------------------------
-
-# Scalars
+# Mantle Initial Conditions ---------------------------------------------------
 P_m = np.ones([Ny_m + 2, Nx_m + 2]) * 0.0  # numpy is row-based, so Ny before Nx
 u_m = np.zeros([Ny_m + 2, Nx_m + 2])
 v_m = np.zeros([Ny_m + 2, Nx_m + 2])
@@ -85,9 +102,7 @@ v_star_m = np.zeros_like(v_m)  # for the intermediate step with pressure to cons
 
 T_new_m = np.zeros_like(T_m)
 
-# Core # -----------------------------------------
-
-# Scalars
+# Core Initial Conditions -----------------------------------------------------
 P_c = np.ones([Ny_c + 2, Nx_c + 2]) * 0.0  # numpy is row-based, so Ny before Nx
 u_c = np.zeros([Ny_c + 2, Nx_c + 2])
 v_c = np.zeros([Ny_c + 2, Nx_c + 2])
@@ -113,15 +128,11 @@ for i in range(1, Nx + 1):
 
 T_c[40:, 1:-1] = 100.0
 
-# -----------------------------------------
-# The Algorithms
-# -----------------------------------------
-
-
+# The Algorithm ===============================================================
 def animate(frame):
     global u_m, v_m, P_m, T_m, u_c, v_c, P_c, T_c, t
 
-    # Step 0: Time Step # -----------------------------------------
+    # Step 0: Time Step -------------------------------------------------------
 
     # Compute maximum velocities for CFL condition
     u_max_m = np.max(np.abs(u_m)) + 1e-5
@@ -143,7 +154,7 @@ def animate(frame):
     dt = min(dt_advection_m, dt_diffusion_m, dt_velocity_m, dt_advection_c, dt_diffusion_c, dt_velocity_c)
     print(f"Dynamic Time Step: {dt}")
 
-    # Step 1: BCs # -----------------------------------------
+    # Step 1: BCs -------------------------------------------------------------
 
     # BC Types:
     # U or V = #.# if BC is #.#
@@ -153,7 +164,7 @@ def animate(frame):
 
     # wall velocities are (where not explicitly defined) averaged of nearest two values
 
-    # Mantle BCs # -----------------------------------------
+    # Mantle BCs --------------------------------------------------------------
 
     # u velocity at tangential boundaries:
     U_t_m = u_m[1, :]  # slip
@@ -175,7 +186,7 @@ def animate(frame):
     v_m[:, 0] = 2 * V_l_m - v_m[:, 1]  # Left: v_l
     v_m[:, -1] = 2 * V_r_m - v_m[:, -2]  # Right: v_r
 
-    # Core BCs # -----------------------------------------
+    # Core BCs ----------------------------------------------------------------
 
     # u velocity at tangential boundaries:
     U_t_c = u_c[1, :]  # slip
@@ -197,7 +208,7 @@ def animate(frame):
     v_c[:, 0] = 2 * V_l_c - v_c[:, 1]  # Left: v_l
     v_c[:, -1] = 2 * V_r_c - v_c[:, -2]  # Right: v_r
 
-    # Temperature # -----------------------------------------
+    # Temperature -------------------------------------------------------------
 
     # The BCs for temperature allow for heat diffusion between the mantle and core
 
@@ -213,9 +224,7 @@ def animate(frame):
     T_c[:, 0] = T_c[:, 1]  # Left: No Flux
     T_c[:, -1] = T_c[:, -2]  # Right: No Flux
 
-    # Step 2.1: Intermediate X-Velocities # -----------------------------------------
-
-    # Mantle Intermediate X-Velocities # -----------------------------------------
+    # Step 2.1.1: Mantle Intermediate X-Velocities ----------------------------
 
     # Pre-computations
     u_l_m = 0.5 * (u_m[1:-1, 1:-1] + u_m[1:-1, :-2])  # self + left average
@@ -239,7 +248,7 @@ def animate(frame):
     # Update intermediate u_star
     u_star_m[1:-1, 1:-1] = u_m[1:-1, 1:-1] + (dt / cell_area) * (u_conv_m + u_diff_m)
 
-    # Core Intermediate X-Velocities # -----------------------------------------
+    # Step 2.1.2: Core Intermediate X-Velocities ------------------------------
 
     # Pre-computations
     u_l_c = 0.5 * (u_c[1:-1, 1:-1] + u_c[1:-1, :-2])  # self + left average
@@ -263,9 +272,7 @@ def animate(frame):
     # Update intermediate u_star
     u_star_c[1:-1, 1:-1] = u_c[1:-1, 1:-1] + (dt / cell_area) * (u_conv_c + u_diff_c)
 
-    # Step 2.2: Intermediate Y-Velocities # -----------------------------------------
-
-    # Mantle Intermediate Y-Velocities # -----------------------------------------
+    # Step 2.2.1: Mantle Intermediate Y-Velocities ----------------------------
 
     # Pre-computations
     v_l_m = 0.5 * (v_m[1:-1, 1:-1] + v_m[1:-1, :-2])  # self + left average
@@ -292,7 +299,7 @@ def animate(frame):
     # Update intermediate v_star
     v_star_m[1:-1, 1:-1] = v_m[1:-1, 1:-1] + (dt / cell_area) * (v_conv_m + v_diff_m + buoyancy_m)
 
-    # Core Intermediate Y-Velocities # -----------------------------------------
+    # Step 2.2.2: Core Intermediate Y-Velocities ------------------------------
 
     # Pre-computations
     v_l_c = 0.5 * (v_c[1:-1, 1:-1] + v_c[1:-1, :-2])  # self + left average
@@ -319,11 +326,8 @@ def animate(frame):
     # Update intermediate v_star
     v_star_c[1:-1, 1:-1] = v_c[1:-1, 1:-1] + (dt / cell_area) * (v_conv_c + v_diff_c + buoyancy_c)
 
-    # Step 3: Pressure Correction # -----------------------------------------
-
+    # Step 3.1: Mantle Pressure Correction ------------------------------------
     # We want to solve for P, so that we can then use it for calculating its gradient
-
-    # Mantle Pressure # -----------------------------------------
 
     # Pre-computations
     u_star_r_m = u_star_m[1:-1, 2:]
@@ -389,7 +393,7 @@ def animate(frame):
     # cell area (the integration over cell volume) cancels out for both transient and pressure gradient terms, so a
     # standard FDM is appropriate here due to the structured nature of the grid
 
-    # Core Pressure # -----------------------------------------
+    # Step 3.2: Core Pressure Correction --------------------------------------
 
     # Pre-computations
     u_star_r_c = u_star_c[1:-1, 2:]
@@ -455,9 +459,7 @@ def animate(frame):
     # cell area (the integration over cell volume) cancels out for both transient and pressure gradient terms, so a
     # standard FDM is appropriate here due to the structured nature of the grid
 
-    # Step 4: Temperature # -----------------------------------------
-
-    # Mantle Temperature # -----------------------------------------
+    # Step 4.1: Mantle Temperature --------------------------------------------
 
     # bring velocities at faces to the cell centers for calculations
     u_c_m = 0.5 * (u_m[1:-1, 1:-1] + u_m[1:-1, 2:])  # self + left average
@@ -491,7 +493,7 @@ def animate(frame):
 
     T_m[1:-1, 1:-1] = T_new_m[1:-1, 1:-1]
 
-    # Core Temperature # -----------------------------------------
+    # Step 4.2: Core Temperature ----------------------------------------------
 
     # bring velocities at faces to the cell centers for calculations
     u_c_c = 0.5 * (u_c[1:-1, 1:-1] + u_c[1:-1, 2:])  # self + left average
@@ -525,8 +527,7 @@ def animate(frame):
 
     T_c[1:-1, 1:-1] = T_new_c[1:-1, 1:-1]
 
-    # Visuals # -----------------------------------------
-
+    # Visuals -----------------------------------------------------------------
     t += dt
 
     # Update mantle visualization
@@ -547,16 +548,9 @@ def animate(frame):
 
     return [im_m, im_c, quiver_m, quiver_c]
 
-
-# -----------------------------------------
-# Visuals
-# -----------------------------------------
-
-# time set-up
+# Visualization ---------------------------------------------------------------
 t = 0
 n_steps = 500
-
-# Set up the plot
 fig, ax = plt.subplots(figsize=(8, 8))  # Adjust figure size for better aspect ratio
 
 # Plot mantle temperature field
@@ -581,15 +575,11 @@ im_c = ax.imshow(
     alpha=0.8  # Add transparency to see both layers if needed
 )
 
-# Add a color bar
 fig.colorbar(im_m, ax=ax, label='Temperature')
-
-# Add labels and title
 ax.set_title('Mantle and Core Temperature Field')
 ax.set_xlabel('X (m)')
 ax.set_ylabel('Y (m)')
 
-# Prepare quiver plots for both layers
 skip = 2  # Skip every 4 data points
 Xq_m = X_m[1:-1, 1:-1][::skip, ::skip]
 Yq_m = Y_m[1:-1, 1:-1][::skip, ::skip]
@@ -597,7 +587,6 @@ Yq_m = Y_m[1:-1, 1:-1][::skip, ::skip]
 Xq_c = X_c[1:-1, 1:-1][::skip, ::skip]
 Yq_c = Y_c[1:-1, 1:-1][::skip, ::skip]
 
-# Initialize quiver plots
 quiver_m = ax.quiver(
     Xq_m, Ly - Yq_m, np.zeros_like(Xq_m), np.zeros_like(Yq_m),
     color='cyan', scale=50, label='Mantle Velocity'
@@ -607,8 +596,5 @@ quiver_c = ax.quiver(
     color='yellow', scale=50, label='Core Velocity'
 )
 
-# Create the animation
 anim = FuncAnimation(fig, animate, frames=n_steps, interval=2, blit=False)
-
-# Show the plot
 plt.show()
