@@ -87,7 +87,7 @@ tolerance = 0.00001
 max_iteration = 100
 mu = 0.1
 
-# Time Step Control
+# Time step buffer for a quick stability fix while troubleshooting 
 buffer = 0.9
 
 # Mantle Initial Conditions ---------------------------------------------------

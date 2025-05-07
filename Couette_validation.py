@@ -3,30 +3,20 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.animation import FuncAnimation
 
-# Navier-Stokes Fluid Model | Finite Volume Method | Staggered Grid | Origin Upper Left Corner
+"""
+2D Incompressible Navier–Stokes Solver
+Finite Volume Method | Staggered Grid | Origin at Upper-Left
 
-# Couette Validation:
-# for all x,y in the mesh, the following must be true for the steady state:
-# u(x,y) = U_T * (y / Ly)
-# v(x,y) = 0
+This script serves to validate the algorithm in 2d_convection.py. At higher resolutions for the mesh, the error increasingly decreases 
+when compared to the analytical solution for Couette flow as time evolves. In steady state, numerical solution should match:
 
-# Results:
-# for high y resolution and pressure iterations (for largest timestep without causing numerical errors), the error
-# remains around 0.05 % after around 10 minutes. The initial global error is 0.0005 and dropping,
-# suggesting eventual convergence.
+u(x, y) = U_T * (y / Ly)
+v(x, y) = 0
 
-# Array Notation:
-# array[0] - first item
-# array[-1] - last item
-# array[1] - second item
-# array[-2] - second-to-last item
-# array[1: -1] - second item to second-to-last item (does not include -1)
+Error between numerical and analytical velocities is printed at three vertical sample points, along with the global L2 norm.
+"""
 
-# -----------------------------------------
-# Simulation Parameters
-# -----------------------------------------
-
-# Mesh
+# Parameters & Grid Setup -----------------------------------------------------
 Nx = 100
 Ny = 100
 Lx = 30
@@ -38,9 +28,6 @@ y = np.linspace(0, Ly, Ny + 2)
 cell_area = dx * dy
 X, Y = np.meshgrid(x, y)
 
-# print(dx, dy)
-
-# Constants
 alpha = 0.1  # velocity diffusion speed (viscosity)
 beta = 0.01  # temperature diffusion speed
 kappa = 0.0  # temperature buoyancy constant
@@ -52,17 +39,13 @@ tolerance = 0.0
 max_iteration = 100000
 mu = 0.1
 
-# Time Step Control
+# Time step buffer for a quick stability fix while troubleshooting 
 buffer = 0.1
 
 # Couette force
 couette_velocity = 1.0
 
-# -----------------------------------------
-# ICs
-# -----------------------------------------
-
-# Scalars
+# Initial Conditions ----------------------------------------------------------
 P = np.ones([Ny + 2, Nx + 2]) * 0.0  # numpy is row-based, so Ny before Nx
 u = np.zeros([Ny + 2, Nx + 2])
 v = np.zeros([Ny + 2, Nx + 2])
@@ -80,15 +63,11 @@ for j in range(1, Ny + 1):  # y-direction, excluding ghost cells
     u[Ny - j, :] = couette_velocity * y_ / Ly  # Linear velocity profile
     print(j)
 
-# -----------------------------------------
-# The Algorithm
-# -----------------------------------------
-
-
+# The Algorithm ===============================================================
 def animate(frame):
     global u, v, P, T, t
 
-    # Step 0: Time Step # -----------------------------------------
+    # Step 0: Time Step -------------------------------------------------------
 
     # Compute maximum velocities for CFL condition
     u_max = np.max(np.abs(u)) + 1e-5
@@ -103,7 +82,7 @@ def animate(frame):
     dt = min(dt_advection, dt_diffusion, dt_velocity)
     # print(f"Dynamic Time Step: {dt}")
 
-    # Step 1: BCs # -----------------------------------------
+    # Step 1: BCs -------------------------------------------------------------
 
     # BC Types:
     # U or V = #.# if BC is #.#
@@ -141,7 +120,7 @@ def animate(frame):
     P[0, :] = P[1, :]  # Top: Neumann BC (gradient = 0)
     P[-1, :] = P[-2, :]  # Bottom: Neumann BC (gradient = 0)
 
-    # Step 2.1: Intermediate X-Velocities # -----------------------------------------
+    # Step 2.1: Intermediate X-Velocities -------------------------------------
 
     # Pre-computations
     u_l = 0.5 * (u[1:-1, 1:-1] + u[1:-1, :-2])  # self + left average
@@ -169,7 +148,7 @@ def animate(frame):
     u_star[:, -1] = u_star[:, 1]  # Right: Periodic
     u_star[:, 0] = u_star[:, -2]  # Left: Periodic
 
-    # Step 2.2: Intermediate Y-Velocities # -----------------------------------------
+    # Step 2.2: Intermediate Y-Velocities -------------------------------------
 
     # Pre-computations
     v_l = 0.5 * (v[1:-1, 1:-1] + v[1:-1, :-2])  # self + left average
@@ -200,7 +179,7 @@ def animate(frame):
     v_star[:, -1] = v_star[:, 1]  # Right: Periodic
     v_star[:, 0] = v_star[:, -2]  # Left: Periodic
 
-    # Step 3: Pressure Correction # -----------------------------------------
+    # Step 3: Pressure Correction ---------------------------------------------
 
     # We want to solve for P, so that we can then use it for calculating its gradient
 
@@ -271,7 +250,7 @@ def animate(frame):
     # cell area (the integration over cell volume) cancels out for both transient and pressure gradient terms, so a
     # standard FDM is appropriate here due to the structured nature of the grid
 
-    # Step 4: Temperature # -----------------------------------------
+    # Step 4: Temperature -----------------------------------------------------
 
     # bring velocities at faces to the cell centers for calculations
     u_c = 0.5 * (u[1:-1, 1:-1] + u[1:-1, 2:])  # self + left average
@@ -305,8 +284,7 @@ def animate(frame):
 
     T[1:-1, 1:-1] = T_new[1:-1, 1:-1]
 
-    # Visuals # -----------------------------------------
-
+    # Visuals -----------------------------------------------------------------
     t += dt
 
     # Update the image data without clearing the axis
@@ -323,8 +301,7 @@ def animate(frame):
 
     quiver.set_UVC(Uq, Vq)
 
-    # Couette Validator # -----------------------------------------
-
+    # Couette Validator -------------------------------------------------------
     print(f"Max y velocity: {np.max(np.abs(v))}")
 
     # Coordinates for validating | In terms of index length (Ny), not mesh length (Ly)
@@ -359,16 +336,10 @@ def animate(frame):
 
     return [im, quiver]
 
-
-# -----------------------------------------
-# Visuals
-# -----------------------------------------
-
-# time set-up
+# Visualization ---------------------------------------------------------------
 t = 0
 n_steps = 500
 
-# Set up the plot
 fig, ax = plt.subplots(figsize=(8, 6))
 im = ax.imshow(T[1:-1, 1:-1], extent=[0, Lx, 0, Ly], origin='upper', cmap=cm.jet, vmin=0, vmax=100)
 fig.colorbar(im, ax=ax)
@@ -376,16 +347,11 @@ ax.set_title('Temperature Field')
 ax.set_xlabel('X (m)')
 ax.set_ylabel('Y (m)')
 
-# Create a coarser grid for quiver plot to avoid clutter
 skip = 2  # Skip every 4 data points
 Xq = X[1:-1, 1:-1][::skip, ::skip]
 Yq = Y[1:-1, 1:-1][::skip, ::skip]
 
-# Initialize quiver plot
 quiver = ax.quiver(Xq, Ly - Yq, np.zeros_like(Xq), np.zeros_like(Yq), color='white', scale=50)
 
-# Create the animation
 anim = FuncAnimation(fig, animate, frames=n_steps, interval=50, blit=True)
-
-# Show the animation
 plt.show()

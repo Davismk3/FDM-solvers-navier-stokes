@@ -43,9 +43,9 @@ array[1: -1] - second item to second-to-last item (does not include -1)
 Staggered Grid:
 
         |       |
-      --+---v₀--+---> x
+      --+---v₀--+--> x
         |       |
-        u₀  P₀  u 
+        u₀  P₀  u
         |       |
       --+---v---+
         ↓
@@ -107,11 +107,10 @@ for i in range(1, Nx + 1):
 T[95:, :] = 100.0  # the bottom rows are all hot
 
 # The Algorithm ===============================================================
-
 def animate(frame):
     global u, v, P, T, t
 
-    # Step 0: Time Step # -----------------------------------------------------
+    # Step 0: Time Step -------------------------------------------------------
 
     # Compute maximum velocities for CFL condition
     u_max = np.max(np.abs(u)) + 1e-5
@@ -126,7 +125,7 @@ def animate(frame):
     dt = min(dt_advection, dt_diffusion, dt_velocity)
     print(f"Dynamic Time Step: {dt}")
 
-    # Step 1: BCs # -----------------------------------------------------------
+    # Step 1: BCs -------------------------------------------------------------
 
     # BC Types:
     # U or V = #.# if BC is #.#
@@ -163,7 +162,7 @@ def animate(frame):
     T[:, 0] = T[:, 1]  # Left: No Flux
     T[:, -1] = T[:, -2]  # Right: No Flux
 
-    # Step 2.1: Intermediate X-Velocities # -----------------------------------
+    # Step 2.1: Intermediate X-Velocities -------------------------------------
 
     # Pre-computations
     u_l = 0.5 * (u[1:-1, 1:-1] + u[1:-1, :-2])  # self + left average
@@ -187,7 +186,7 @@ def animate(frame):
     # Update intermediate u_star
     u_star[1:-1, 1:-1] = u[1:-1, 1:-1] + (dt / cell_area) * (u_conv + u_diff)
 
-    # Step 2.2: Intermediate Y-Velocities # -----------------------------------
+    # Step 2.2: Intermediate Y-Velocities -------------------------------------
 
     # Pre-computations
     v_l = 0.5 * (v[1:-1, 1:-1] + v[1:-1, :-2])  # self + left average
@@ -214,7 +213,7 @@ def animate(frame):
     # Update intermediate v_star
     v_star[1:-1, 1:-1] = v[1:-1, 1:-1] + (dt / cell_area) * (v_conv + v_diff + buoyancy)
 
-    # Step 3: Pressure Correction # -------------------------------------------
+    # Step 3: Pressure Correction ---------------------------------------------
 
     # We want to solve for P, so that we can then use it for calculating its gradient
 
@@ -282,7 +281,7 @@ def animate(frame):
     # cell area (the integration over cell volume) cancels out for both transient and pressure gradient terms, so a
     # standard FDM is appropriate here due to the structured nature of the grid
 
-    # Step 4: Temperature # ---------------------------------------------------
+    # Step 4: Temperature -----------------------------------------------------
 
     # bring velocities at faces to the cell centers for calculations
     u_c = 0.5 * (u[1:-1, 1:-1] + u[1:-1, 2:])  # self + left average
@@ -320,7 +319,7 @@ def animate(frame):
 
     T[1:-1, 1:-1] = T_new[1:-1, 1:-1]
 
-    # Visuals # ---------------------------------------------------------------
+    # Visuals -----------------------------------------------------------------
 
     t += dt
 
