@@ -163,6 +163,7 @@ def animate(frame):
     T[:, -1] = T[:, -2]  # Right: No Flux
 
     # Step 2.1: Intermediate X-Velocities -------------------------------------
+    # ∂u/∂t + (ū⋅∇)u = ν∇²u - ∇p
 
     # Pre-computations
     u_l = 0.5 * (u[1:-1, 1:-1] + u[1:-1, :-2])  # self + left average
@@ -187,6 +188,7 @@ def animate(frame):
     u_star[1:-1, 1:-1] = u[1:-1, 1:-1] + (dt / cell_area) * (u_conv + u_diff)
 
     # Step 2.2: Intermediate Y-Velocities -------------------------------------
+    # ∂v/∂t + (ū⋅∇)v = ν∇²v - ∇p + f_b
 
     # Pre-computations
     v_l = 0.5 * (v[1:-1, 1:-1] + v[1:-1, :-2])  # self + left average
