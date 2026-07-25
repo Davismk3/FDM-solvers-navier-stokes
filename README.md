@@ -6,6 +6,7 @@ The following repository contains scripts for solving and validating the incompr
 
 This image shows two separate fluid domains. Fluid cannot pass between the central barrier, but heat can. Heat is initially present in the bottom domain only, but then heat travels across the barrier, creating a central plume in the top fluid domain. 
 
+![Heat Transfer](assets/heat_transfer.gif)
 ![Heat Transfer](assets/heat_transfer.png)
 
 ## Contents
